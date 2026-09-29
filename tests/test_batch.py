@@ -1,6 +1,6 @@
 import pytest
 
-from src.batch import analyze_reviews
+from src.batch import analyze_reviews, calculate_summary
 
 
 class FakeClassifier:
@@ -85,3 +85,34 @@ def test_reviews_without_valid_text_raise_error():
             classifier,
             ["", "   ", None],
         )
+
+def test_calculate_summary_returns_correct_metrics():
+    results = [
+        {"sentiment": "Positive", "confidence": 0.90},
+        {"sentiment": "Positive", "confidence": 0.80},
+        {"sentiment": "Neutral", "confidence": 0.70},
+        {"sentiment": "Negative", "confidence": 0.60},
+            ]
+
+    summary = calculate_summary(results)
+
+    assert summary["total_reviews"] == 4
+
+    assert summary["positive"] == 2
+    assert summary["neutral"] == 1
+    assert summary["negative"] == 1
+
+    assert summary["positive_pct"] == 50.0
+    assert summary["neutral_pct"] == 25.0
+    assert summary["negative_pct"] == 25.0
+
+    assert summary["vibe_score"] == 62.5
+    assert summary["average_confidence"] == 75.0
+
+
+def test_calculate_summary_empty_results_raises_error():
+    with pytest.raises(
+        ValueError,
+        match="Results cannot be empty.",
+    ):
+        calculate_summary([])

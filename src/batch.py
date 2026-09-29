@@ -32,3 +32,51 @@ def analyze_reviews(classifier, reviews, batch_size=16):
         )
 
     return results
+
+def calculate_summary(results):
+    """Calculate aggregate sentiment metrics for analyzed reviews."""
+
+    if not results:
+        raise ValueError("Results cannot be empty.")
+
+    total = len(results)
+
+    positive = sum(
+        1 for result in results
+        if result["sentiment"] == "Positive"
+    )
+
+    neutral = sum(
+        1 for result in results
+        if result["sentiment"] == "Neutral"
+    )
+
+    negative = sum(
+        1 for result in results
+        if result["sentiment"] == "Negative"
+    )
+
+    positive_pct = (positive / total) * 100
+    neutral_pct = (neutral / total) * 100
+    negative_pct = (negative / total) * 100
+
+    vibe_score = (
+        (positive + 0.5 * neutral) / total
+    ) * 100
+
+    average_confidence = (
+        sum(result["confidence"] for result in results)
+        / total
+    ) * 100
+
+    return {
+        "total_reviews": total,
+        "positive": positive,
+        "neutral": neutral,
+        "negative": negative,
+        "positive_pct": positive_pct,
+        "neutral_pct": neutral_pct,
+        "negative_pct": negative_pct,
+        "vibe_score": vibe_score,
+        "average_confidence": average_confidence,
+    }
