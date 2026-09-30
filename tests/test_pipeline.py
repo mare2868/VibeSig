@@ -54,20 +54,38 @@ def test_run_feedback_pipeline():
 
     assert len(results_df) == 3
 
-    assert list(results_df["sentiment"]) == [
+    # Raw predictions must preserve the original
+    # classifier output.
+    assert list(results_df["raw_sentiment"]) == [
         "Positive",
         "Negative",
         "Neutral",
     ]
 
-    assert summary["total_reviews"] == 3
-    assert summary["positive"] == 1
-    assert summary["negative"] == 1
-    assert summary["neutral"] == 1
+    # VibeSig sentiment uses the calibration layer.
+    # Positive at 0.90 is recalibrated to Neutral
+    # because the validated threshold is 0.97.
+    assert list(results_df["sentiment"]) == [
+        "Neutral",
+        "Negative",
+        "Neutral",
+    ]
 
-    assert round(summary["positive_pct"], 2) == 33.33
-    assert round(summary["neutral_pct"], 2) == 33.33
+    assert list(results_df["confidence"]) == [
+        0.90,
+        0.80,
+        0.70,
+    ]
+
+    assert summary["total_reviews"] == 3
+
+    assert summary["positive"] == 0
+    assert summary["negative"] == 1
+    assert summary["neutral"] == 2
+
+    assert round(summary["positive_pct"], 2) == 0.00
+    assert round(summary["neutral_pct"], 2) == 66.67
     assert round(summary["negative_pct"], 2) == 33.33
 
-    assert summary["vibe_score"] == 50.0
+    assert round(summary["vibe_score"], 2) == 33.33
     assert summary["average_confidence"] == 80.0

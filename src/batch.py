@@ -1,5 +1,8 @@
+from src.calibration import calibrate_sentiment_prediction
+
+
 def analyze_reviews(classifier, reviews, batch_size=16):
-    """Analyze sentiment for multiple customer reviews in batches."""
+    """Analyze and calibrate sentiment for multiple customer reviews."""
 
     if not reviews:
         raise ValueError("Reviews list cannot be empty.")
@@ -23,11 +26,20 @@ def analyze_reviews(classifier, reviews, batch_size=16):
     results = []
 
     for review, prediction in zip(clean_reviews, predictions):
+        raw_sentiment = prediction["label"]
+        confidence = prediction["score"]
+
+        sentiment = calibrate_sentiment_prediction(
+            raw_sentiment,
+            confidence,
+        )
+
         results.append(
             {
                 "text": review,
-                "sentiment": prediction["label"],
-                "confidence": prediction["score"],
+                "raw_sentiment": raw_sentiment,
+                "sentiment": sentiment,
+                "confidence": confidence,
             }
         )
 
