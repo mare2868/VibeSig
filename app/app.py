@@ -9,6 +9,7 @@ from src.drivers import (
     summarize_negative_drivers,
     prioritize_negative_drivers,
 )
+from src.recommendations import generate_action_recommendations
 
 
 st.set_page_config(
@@ -266,7 +267,9 @@ with batch_tab:
                 driver_priorities = prioritize_negative_drivers(
                      driver_summary
             )
-
+                action_recommendations = generate_action_recommendations(
+                    driver_priorities
+            )
                 st.caption("CUSTOMER FEEDBACK OVERVIEW")
                 st.subheader("Customer Vibe")
 
@@ -707,6 +710,45 @@ with batch_tab:
                     st.caption(
                         "Priority levels are rule-based and reflect "
                         "how frequently each driver appears in negative reviews."
+                    )
+
+                                        # -----------------------------------------
+                    # RECOMMENDED ACTIONS
+                    # -----------------------------------------
+
+                    st.markdown("#### Recommended Actions")
+
+                    st.write(
+                        "Suggested areas for further business review "
+                        "based on the highest-priority feedback signals."
+                    )
+
+                    if action_recommendations:
+
+                        for index, item in enumerate(
+                            action_recommendations,
+                            start=1,
+                        ):
+                            st.markdown(
+                                f"**{index}. {item['driver']}** "
+                                f"· {item['negative_review_pct']:.1f}% "
+                                f"of negative reviews"
+                            )
+
+                            st.write(
+                                item["recommendation"]
+                            )
+
+                    else:
+
+                        st.info(
+                            "No action recommendations are available "
+                            "for the current analysis."
+                        )
+
+                    st.caption(
+                        "Recommendations are rule-based prompts for "
+                        "further investigation, not automated decisions."
                     )
                 else:
 
