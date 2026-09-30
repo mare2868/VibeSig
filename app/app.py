@@ -4,6 +4,7 @@ import altair as alt
 
 from src.sentiment import load_sentiment_model, predict_sentiment
 from src.pipeline import run_feedback_pipeline
+from src.insights import generate_vibe_insight
 
 
 st.set_page_config(
@@ -254,6 +255,7 @@ with batch_tab:
 
                 results_df = st.session_state.batch_results
                 summary = st.session_state.batch_summary
+                insight = generate_vibe_insight(summary)
 
                 st.caption("CUSTOMER FEEDBACK OVERVIEW")
                 st.subheader("Customer Vibe")
@@ -459,18 +461,64 @@ with batch_tab:
                         strokeWidth=0
                     )
                 )
-
                 st.altair_chart(
                     chart,
                     use_container_width=True,
                 )
 
                 # ---------------------------------------------
+                # VIBE INSIGHT
+                # ---------------------------------------------
+
+                st.markdown("### Vibe Insight")
+
+                st.caption(
+                    "RULE-BASED CUSTOMER SIGNAL INTERPRETATION"
+                )
+
+                st.markdown(
+                    f"**{insight['overall_sentiment']} "
+                    f"customer sentiment**"
+                )
+
+                st.write(
+                    insight["interpretation"]
+                )
+
+                insight_col1, insight_col2 = st.columns(2)
+
+                with insight_col1:
+                    st.info(
+                        f"**Key signal**\n\n"
+                        f"{insight['key_signal']}"
+                    )
+
+                with insight_col2:
+                    if summary["negative_pct"] >= 30:
+                        st.error(
+                            f"**Attention signal**\n\n"
+                            f"{insight['attention']}"
+                        )
+
+                    elif summary["negative_pct"] >= 15:
+                        st.warning(
+                            f"**Attention signal**\n\n"
+                            f"{insight['attention']}"
+                        )
+
+                    else:
+                        st.success(
+                            f"**Attention signal**\n\n"
+                            f"{insight['attention']}"
+                        )
+
+                st.divider()
+
+                # ---------------------------------------------
                 # RESULTS TABLE
                 # ---------------------------------------------
 
                 st.subheader("Analyzed Reviews")
-
                 st.dataframe(
                     results_df,
                     use_container_width=True,
