@@ -5,6 +5,7 @@ import altair as alt
 from src.sentiment import load_sentiment_model, predict_sentiment
 from src.pipeline import run_feedback_pipeline
 from src.insights import generate_vibe_insight
+from src.drivers import summarize_negative_drivers
 
 
 st.set_page_config(
@@ -256,6 +257,9 @@ with batch_tab:
                 results_df = st.session_state.batch_results
                 summary = st.session_state.batch_summary
                 insight = generate_vibe_insight(summary)
+                driver_summary = summarize_negative_drivers(
+                    results_df
+            )
 
                 st.caption("CUSTOMER FEEDBACK OVERVIEW")
                 st.subheader("Customer Vibe")
@@ -511,6 +515,132 @@ with batch_tab:
                             f"**Attention signal**\n\n"
                             f"{insight['attention']}"
                         )
+
+                st.divider()
+
+                                # ---------------------------------------------
+                # NEGATIVE FEEDBACK DRIVERS
+                # ---------------------------------------------
+
+                st.markdown("### Negative Feedback Drivers")
+
+                st.write(
+                    "Most common themes detected across "
+                    "negative customer reviews."
+                )
+
+                if driver_summary["negative_reviews"] > 0:
+
+                    st.caption(
+                        f"Based on "
+                        f"{driver_summary['negative_reviews']:,} "
+                        f"negative reviews"
+                    )
+
+                    drivers_df = pd.DataFrame(
+                        driver_summary["drivers"]
+                    )
+
+                    drivers_df["Label"] = (
+                        drivers_df["negative_review_pct"]
+                         .map(lambda value: f"{value:.1f}%")
+                    )
+
+                    driver_chart = (
+                        alt.Chart(drivers_df)
+                        .mark_bar(
+                            cornerRadiusEnd=6,
+                            height=30,
+                        )
+                        .encode(
+                            y=alt.Y(
+                                "driver:N",
+                                sort="-x",
+                                title=None,
+                                axis=alt.Axis(
+                                    labelFontSize=13,
+                                    labelPadding=10,
+                                ),
+                            ),
+                            x=alt.X(
+                                "negative_review_pct:Q",
+                                scale=alt.Scale(
+                                    domain=[0, 100]
+                                ),
+                                title=None,
+                                axis=alt.Axis(
+                                    labels=False,
+                                    ticks=False,
+                                    domain=False,
+                                    grid=False,
+                                ),
+                            ),
+                            tooltip=[
+                                alt.Tooltip(
+                                    "driver:N",
+                                    title="Driver",
+                                ),
+                                alt.Tooltip(
+                                    "mentions:Q",
+                                    title="Negative reviews",
+                                ),
+                                alt.Tooltip(
+                                    "negative_review_pct:Q",
+                                    title="% of negative reviews",
+                                    format=".1f",
+                                ),
+                            ],
+                        )
+                    )
+
+                    driver_labels = (
+                        alt.Chart(drivers_df)
+                        .mark_text(
+                            align="left",
+                            baseline="middle",
+                            dx=8,
+                            fontSize=13,
+                            fontWeight="bold",
+                        )
+                        .encode(
+                            y=alt.Y(
+                                "driver:N",
+                                sort="-x",
+                            ),
+                            x=alt.X(
+                                "negative_review_pct:Q"
+                            ),
+                           text="Label:N",
+                        )
+                    )
+
+                    drivers_chart = (
+                        (driver_chart + driver_labels)
+                        .properties(
+                            height=260,
+                        )
+                        .configure_view(
+                            strokeWidth=0
+                        )
+                    )
+
+                    st.altair_chart(
+                        drivers_chart,
+                        use_container_width=True,
+                    )
+
+                    st.caption(
+                        "% of negative reviews mentioning each driver. "
+                        "A review may mention more than one driver, "
+                        "so percentages do not need to total 100%."
+                    )
+
+                else:
+
+                    st.info(
+                        "No negative reviews were detected, "
+                        "so feedback drivers are not available."
+                    )
 
                 st.divider()
 
