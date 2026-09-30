@@ -7,9 +7,10 @@ from src.pipeline import run_feedback_pipeline
 
 
 st.set_page_config(
-    page_title="VibeSig",
+    page_title="VibeSig | Customer Feedback Intelligence",
     page_icon="💬",
-    layout="centered",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 
@@ -24,13 +25,25 @@ if "batch_results" not in st.session_state:
 if "batch_summary" not in st.session_state:
     st.session_state.batch_summary = None
 
+st.write("")
+
+st.caption("CUSTOMER FEEDBACK INTELLIGENCE")
 
 st.title("VibeSig")
-st.subheader("Turn customer feedback into actionable signals.")
+
+st.markdown(
+    "### Turn customer feedback into actionable signals."
+)
 
 st.write(
-    "Analyze customer feedback with AI-powered sentiment intelligence."
+    "AI-powered sentiment intelligence for individual reviews "
+    "and customer feedback datasets."
 )
+
+st.caption(
+    "Sentiment classification • Vibe Score • Batch analytics • CSV export"
+)
+
 
 
 single_tab, batch_tab = st.tabs(
@@ -49,18 +62,26 @@ with single_tab:
 
     st.subheader("Analyze a single customer review")
 
-    review_text = st.text_area(
-        "Customer review",
-        placeholder="Paste a customer review here...",
-        height=180,
+    st.write(
+        "Enter a customer review to identify its sentiment "
+        "and model confidence."
     )
 
-    analyze_button = st.button(
-        "Analyze feedback",
-        type="primary",
-        key="single_analyze",
-    )
+    input_col, empty_col = st.columns([2.2, 1])
 
+    with input_col:
+
+        review_text = st.text_area(
+            "Customer review",
+            placeholder="Paste a customer review here...",
+            height=160,
+        )
+
+        analyze_button = st.button(
+            "Analyze feedback",
+            type="primary",
+            key="single_analyze",
+        )
     if analyze_button:
 
         if not review_text.strip():
@@ -76,33 +97,62 @@ with single_tab:
                     review_text,
                 )
 
-            st.success("Analysis complete.")
+            sentiment = result["sentiment"]
+            confidence = result["confidence"]
 
-            col1, col2 = st.columns(2)
+            st.caption("ANALYSIS RESULT")
 
-            with col1:
-                st.metric(
-                    "Sentiment",
-                    result["sentiment"],
-                )
+            results_area, results_space = st.columns([2.2, 1])
 
-            with col2:
-                st.metric(
-                    "Confidence",
-                    f"{result['confidence']:.1%}",
-                )
+            with results_area:
 
+                result_col1, result_col2 = st.columns(2)
 
+                with result_col1:
+
+                    st.metric(
+                        "Customer sentiment",
+                        sentiment,
+                    )
+
+                    if sentiment == "Positive":
+                        st.success(
+                            "Strong positive customer signal."
+                        )
+
+                    elif sentiment == "Negative":
+                        st.error(
+                            "Negative customer signal detected."
+                        )
+
+                    else:
+                        st.warning(
+                            "Mixed or neutral customer signal."
+                        )
+
+                with result_col2:
+
+                    st.metric(
+                        "Model confidence",
+                        f"{confidence:.1%}",
+                    )
+
+                    st.progress(
+                        min(float(confidence), 1.0)
+                    )
+
+            
 # ---------------------------------------------------------
 # BATCH ANALYSIS
 # ---------------------------------------------------------
 
 with batch_tab:
 
-    st.subheader("Analyze customer feedback from CSV")
+    st.subheader("Analyze customer feedback at scale")
 
     st.write(
-        "Upload a CSV file containing customer reviews."
+        "Upload a CSV dataset to measure customer sentiment, "
+        "calculate your Vibe Score, and explore feedback patterns."
     )
 
     uploaded_file = st.file_uploader(
@@ -126,46 +176,53 @@ with batch_tab:
                 use_container_width=True,
             )
 
-            st.write(
-                "Select the column containing customer reviews"
+            st.markdown("### Configure analysis")
+
+            config_col1, config_col2, config_space = st.columns(
+                [1.2, 1, 0.8]
             )
 
-            text_column = st.selectbox(
-                "Review column",
-                options=list(df.columns),
-                index=(
-                    list(df.columns).index("text")
-                    if "text" in df.columns
-                    else 0
-                ),
-            )
+            with config_col1:
 
-            st.info(
-                f"Selected column: {text_column}"
-            )
+                text_column = st.selectbox(
+                    "Review column",
+                    options=list(df.columns),
+                    index=(
+                        list(df.columns).index("text")
+                        if "text" in df.columns
+                        else 0
+                    ),
+                )
 
             max_reviews = min(len(df), 1000)
 
-            review_limit = st.number_input(
-                "Number of reviews to analyze",
-                min_value=1,
-                max_value=max_reviews,
-                value=min(100, max_reviews),
-                step=50,
-                help="Start with a smaller sample for faster analysis.",
-            )
+            with config_col2:
+
+                review_limit = st.number_input(
+                    "Reviews to analyze",
+                    min_value=1,
+                    max_value=max_reviews,
+                    value=min(100, max_reviews),
+                    step=50,
+                    help=(
+                        "Start with a smaller sample "
+                        "for faster analysis."
+                    ),
+                )
 
             st.caption(
-                f"VibeSig will analyze {review_limit:,} "
-                f"of the {len(df):,} available reviews."
+                f"Ready to analyze {review_limit:,} reviews "
+                f"from `{text_column}` • "
+                f"{len(df):,} total rows available"
             )
 
             analyze_csv_button = st.button(
-                "Analyze CSV",
+                "Analyze feedback",
                 type="primary",
                 key="batch_analyze",
             )
 
+           
             if analyze_csv_button:
 
                 analysis_df = df.head(
@@ -198,61 +255,98 @@ with batch_tab:
                 results_df = st.session_state.batch_results
                 summary = st.session_state.batch_summary
 
-                st.success("Batch analysis complete.")
-
+                st.caption("CUSTOMER FEEDBACK OVERVIEW")
                 st.subheader("Customer Vibe")
 
-                col1, col2, col3 = st.columns(3)
+                st.write(
+                    "A consolidated view of customer sentiment "
+                    "across the analyzed feedback."
+                )
 
-                with col1:
+                # ---------------------------------------------
+                # PRIMARY KPIs
+                # ---------------------------------------------
+
+                kpi1, kpi2, kpi3 = st.columns(3)
+
+                with kpi1:
                     st.metric(
                         "Vibe Score",
-                        f"{summary['vibe_score']:.1f}/100",
+                        f"{summary['vibe_score']:.1f}",
+                        help=(
+                            "Overall customer sentiment score "
+                            "on a 0–100 scale."
+                        ),
                     )
+                    st.caption("Overall sentiment • 0–100")
 
-                with col2:
+                with kpi2:
                     st.metric(
                         "Reviews analyzed",
                         f"{summary['total_reviews']:,}",
                     )
+                    st.caption("Customer feedback processed")
 
-                with col3:
+                with kpi3:
                     st.metric(
-                        "Avg. confidence",
+                        "Model confidence",
                         f"{summary['average_confidence']:.1f}%",
                     )
+                    st.caption("Average prediction confidence")
 
-                col4, col5, col6 = st.columns(3)
+                st.divider()
 
-                with col4:
+                # ---------------------------------------------
+                # SENTIMENT MIX
+                # ---------------------------------------------
+
+                st.markdown("### Sentiment mix")
+
+                sentiment_col1, sentiment_col2, sentiment_col3 = (
+                    st.columns(3)
+                )
+
+                with sentiment_col1:
                     st.metric(
                         "Positive",
                         f"{summary['positive_pct']:.1f}%",
+                        help=(
+                            f"{summary['positive']:,} "
+                            "positive reviews"
+                        ),
                     )
 
-                with col5:
+                with sentiment_col2:
                     st.metric(
                         "Neutral",
                         f"{summary['neutral_pct']:.1f}%",
+                        help=(
+                            f"{summary['neutral']:,} "
+                            "neutral reviews"
+                        ),
                     )
 
-                with col6:
+                with sentiment_col3:
                     st.metric(
                         "Negative",
                         f"{summary['negative_pct']:.1f}%",
+                        help=(
+                            f"{summary['negative']:,} "
+                            "negative reviews"
+                        ),
                     )
 
-                    st.caption(
+                st.caption(
                     f"Processed in "
-                    f"{summary['processing_time_seconds']:.2f} seconds "
-                    f"• {summary['reviews_per_second']:.2f} reviews/second"
+                    f"{summary['processing_time_seconds']:.2f} seconds"
+                    f" • "
+                    f"{summary['reviews_per_second']:.2f} reviews/second"
                 )
-
                 # ---------------------------------------------
                 # SENTIMENT DISTRIBUTION
                 # ---------------------------------------------
 
-                st.subheader("Sentiment Distribution")
+                st.markdown("### Sentiment Distribution")
 
                 sentiment_chart = pd.DataFrame(
                     {
