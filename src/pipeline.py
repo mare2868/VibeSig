@@ -9,7 +9,7 @@ def run_feedback_pipeline(
     classifier,
     df,
     text_column,
-    batch_size=16,
+    batch_size=8,
 ):
     """Run the complete VibeSig customer feedback analysis pipeline."""
 
