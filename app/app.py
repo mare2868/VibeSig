@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 from src.sentiment import load_sentiment_model, predict_sentiment
 from src.pipeline import run_feedback_pipeline
@@ -16,6 +17,12 @@ st.set_page_config(
 def get_sentiment_model():
     """Load and cache the sentiment model."""
     return load_sentiment_model()
+
+if "batch_results" not in st.session_state:
+    st.session_state.batch_results = None
+
+if "batch_summary" not in st.session_state:
+    st.session_state.batch_summary = None
 
 
 st.title("VibeSig")
@@ -176,8 +183,20 @@ with batch_tab:
                         text_column,
                     )
 
-                results_df = analysis["results"]
-                summary = analysis["summary"]
+                st.session_state.batch_results = analysis["results"]
+                st.session_state.batch_summary = analysis["summary"]
+
+            # -------------------------------------------------
+            # DISPLAY STORED ANALYSIS
+            # -------------------------------------------------
+
+            if (
+                st.session_state.batch_results is not None
+                and st.session_state.batch_summary is not None
+            ):
+
+                results_df = st.session_state.batch_results
+                summary = st.session_state.batch_summary
 
                 st.success("Batch analysis complete.")
 
@@ -223,6 +242,133 @@ with batch_tab:
                         f"{summary['negative_pct']:.1f}%",
                     )
 
+                # ---------------------------------------------
+                # SENTIMENT DISTRIBUTION
+                # ---------------------------------------------
+
+                st.subheader("Sentiment Distribution")
+
+                sentiment_chart = pd.DataFrame(
+                    {
+                        "Sentiment": [
+                            "Positive",
+                            "Neutral",
+                            "Negative",
+                        ],
+                        "Percentage": [
+                            summary["positive_pct"],
+                            summary["neutral_pct"],
+                            summary["negative_pct"],
+                        ],
+                    }
+                )
+
+                sentiment_chart["Label"] = (
+                    sentiment_chart["Percentage"]
+                    .map(lambda value: f"{value:.1f}%")
+                )
+
+                sentiment_order = [
+                    "Positive",
+                    "Neutral",
+                    "Negative",
+                ]
+
+                bars = (
+                    alt.Chart(sentiment_chart)
+                    .mark_bar(
+                        cornerRadiusEnd=6,
+                        height=34,
+                    )
+                    .encode(
+                        y=alt.Y(
+                            "Sentiment:N",
+                            sort=sentiment_order,
+                            title=None,
+                            axis=alt.Axis(
+                                labelFontSize=14,
+                                labelPadding=12,
+                            ),
+                        ),
+                        x=alt.X(
+                            "Percentage:Q",
+                            scale=alt.Scale(
+                                domain=[0, 100]
+                            ),
+                            title=None,
+                            axis=alt.Axis(
+                                labels=False,
+                                ticks=False,
+                                domain=False,
+                                grid=False,
+                            ),
+                        ),
+                        color=alt.Color(
+                            "Sentiment:N",
+                            scale=alt.Scale(
+                                domain=sentiment_order,
+                                range=[
+                                    "#22C55E",
+                                    "#F59E0B",
+                                    "#EF4444",
+                                ],
+                            ),
+                            legend=None,
+                        ),
+                        tooltip=[
+                            alt.Tooltip(
+                                "Sentiment:N",
+                                title="Sentiment",
+                            ),
+                            alt.Tooltip(
+                                "Percentage:Q",
+                                title="Share",
+                                format=".1f",
+                            ),
+                        ],
+                    )
+                )
+
+                labels = (
+                    alt.Chart(sentiment_chart)
+                    .mark_text(
+                        align="left",
+                        baseline="middle",
+                        dx=8,
+                        fontSize=14,
+                        fontWeight="bold",
+                    )
+                    .encode(
+                        y=alt.Y(
+                            "Sentiment:N",
+                            sort=sentiment_order,
+                        ),
+                        x=alt.X(
+                            "Percentage:Q"
+                        ),
+                        text="Label:N",
+                    )
+                )
+
+                chart = (
+                    (bars + labels)
+                    .properties(
+                        height=190,
+                    )
+                    .configure_view(
+                        strokeWidth=0
+                    )
+                )
+
+                st.altair_chart(
+                    chart,
+                    use_container_width=True,
+                )
+
+                # ---------------------------------------------
+                # RESULTS TABLE
+                # ---------------------------------------------
+
                 st.subheader("Analyzed Reviews")
 
                 st.dataframe(
@@ -230,7 +376,24 @@ with batch_tab:
                     use_container_width=True,
                 )
 
+                # ---------------------------------------------
+                # DOWNLOAD RESULTS
+                # ---------------------------------------------
+
+                csv_results = results_df.to_csv(
+                    index=False
+                ).encode("utf-8")
+
+                st.download_button(
+                    label="Download analyzed CSV",
+                    data=csv_results,
+                    file_name="vibesig_analyzed_reviews.csv",
+                    mime="text/csv",
+                    key="download_results",
+                )
+
         except Exception as error:
+
             st.error(
                 f"Unable to process CSV file: {error}"
             )
