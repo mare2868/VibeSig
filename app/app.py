@@ -242,6 +242,12 @@ with batch_tab:
                         f"{summary['negative_pct']:.1f}%",
                     )
 
+                    st.caption(
+                    f"Processed in "
+                    f"{summary['processing_time_seconds']:.2f} seconds "
+                    f"• {summary['reviews_per_second']:.2f} reviews/second"
+                )
+
                 # ---------------------------------------------
                 # SENTIMENT DISTRIBUTION
                 # ---------------------------------------------
