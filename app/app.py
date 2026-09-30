@@ -5,7 +5,10 @@ import altair as alt
 from src.sentiment import load_sentiment_model, predict_sentiment
 from src.pipeline import run_feedback_pipeline
 from src.insights import generate_vibe_insight
-from src.drivers import summarize_negative_drivers
+from src.drivers import (
+    summarize_negative_drivers,
+    prioritize_negative_drivers,
+)
 
 
 st.set_page_config(
@@ -259,6 +262,9 @@ with batch_tab:
                 insight = generate_vibe_insight(summary)
                 driver_summary = summarize_negative_drivers(
                     results_df
+            )
+                driver_priorities = prioritize_negative_drivers(
+                     driver_summary
             )
 
                 st.caption("CUSTOMER FEEDBACK OVERVIEW")
@@ -634,7 +640,74 @@ with batch_tab:
                         "A review may mention more than one driver, "
                         "so percentages do not need to total 100%."
                     )
+                                        # -----------------------------------------
+                    # PRIORITY SIGNALS
+                    # -----------------------------------------
 
+                    st.markdown("#### Priority Signals")
+
+                    high_priority = [
+                        item
+                        for item in driver_priorities
+                        if item["priority"] == "High"
+                    ]
+
+                    medium_priority = [
+                        item
+                        for item in driver_priorities
+                        if item["priority"] == "Medium"
+                    ]
+
+                    low_priority = [
+                        item
+                        for item in driver_priorities
+                        if item["priority"] == "Low"
+                    ]
+
+                    priority_col1, priority_col2, priority_col3 = (
+                        st.columns(3)
+                    )
+
+                    with priority_col1:
+                        st.markdown("**High**")
+
+                        if high_priority:
+                            for item in high_priority:
+                                st.write(
+                                    f"{item['driver']} "
+                                    f"· {item['negative_review_pct']:.1f}%"
+                                )
+                        else:
+                            st.caption("No high-priority signals")
+
+                    with priority_col2:
+                        st.markdown("**Medium**")
+
+                        if medium_priority:
+                            for item in medium_priority:
+                                st.write(
+                                    f"{item['driver']} "
+                                    f"· {item['negative_review_pct']:.1f}%"
+                                )
+                        else:
+                            st.caption("No medium-priority signals")
+
+                    with priority_col3:
+                        st.markdown("**Low**")
+
+                        if low_priority:
+                            for item in low_priority:
+                                st.write(
+                                    f"{item['driver']} "
+                                    f"· {item['negative_review_pct']:.1f}%"
+                                )
+                        else:
+                            st.caption("No low-priority signals")
+
+                    st.caption(
+                        "Priority levels are rule-based and reflect "
+                        "how frequently each driver appears in negative reviews."
+                    )
                 else:
 
                     st.info(

@@ -3,6 +3,7 @@ import pandas as pd
 from src.drivers import (
     detect_feedback_drivers,
     summarize_negative_drivers,
+    prioritize_negative_drivers,
 )
 
 
@@ -149,3 +150,76 @@ def test_summary_accepts_dataframe():
 
     assert drivers["Service"] == 1
     assert drivers["Wait Time"] == 1
+def test_prioritize_negative_drivers():
+    driver_summary = {
+        "negative_reviews": 20,
+        "total_driver_mentions": 26,
+        "drivers": [
+            {
+                "driver": "Food / Product",
+                "mentions": 9,
+                "percentage": 34.6,
+                "negative_review_pct": 45.0,
+            },
+            {
+                "driver": "Service",
+                "mentions": 6,
+                "percentage": 23.1,
+                "negative_review_pct": 30.0,
+            },
+            {
+                "driver": "Price / Value",
+                "mentions": 2,
+                "percentage": 7.7,
+                "negative_review_pct": 10.0,
+            },
+        ],
+    }
+
+    priorities = prioritize_negative_drivers(
+        driver_summary
+    )
+
+    assert priorities[0]["priority"] == "High"
+    assert priorities[1]["priority"] == "Medium"
+    assert priorities[2]["priority"] == "Low"
+
+
+def test_priority_threshold_boundaries():
+    driver_summary = {
+        "drivers": [
+            {
+                "driver": "High Boundary",
+                "negative_review_pct": 40.0,
+            },
+            {
+                "driver": "Medium Boundary",
+                "negative_review_pct": 20.0,
+            },
+            {
+                "driver": "Low Boundary",
+                "negative_review_pct": 19.9,
+            },
+        ]
+    }
+
+    priorities = prioritize_negative_drivers(
+        driver_summary
+    )
+
+    assert priorities[0]["priority"] == "High"
+    assert priorities[1]["priority"] == "Medium"
+    assert priorities[2]["priority"] == "Low"
+
+
+def test_empty_driver_summary_raises_error():
+    try:
+        prioritize_negative_drivers({})
+
+    except ValueError as error:
+        assert str(error) == "Driver summary cannot be empty."
+
+    else:
+        raise AssertionError(
+            "Expected ValueError for empty driver summary."
+        )

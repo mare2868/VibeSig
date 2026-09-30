@@ -161,3 +161,32 @@ def summarize_negative_drivers(results):
         "total_driver_mentions": total_mentions,
         "drivers": driver_summary,
     }
+
+def prioritize_negative_drivers(driver_summary):
+    """Assign business attention levels to negative feedback drivers."""
+
+    if not driver_summary:
+        raise ValueError("Driver summary cannot be empty.")
+
+    drivers = driver_summary.get("drivers", [])
+
+    priorities = []
+
+    for driver in drivers:
+        percentage = driver["negative_review_pct"]
+
+        if percentage >= 40:
+            priority = "High"
+        elif percentage >= 20:
+            priority = "Medium"
+        else:
+            priority = "Low"
+
+        priorities.append(
+            {
+                **driver,
+                "priority": priority,
+            }
+        )
+
+    return priorities
