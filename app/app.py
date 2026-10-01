@@ -2,6 +2,14 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from src.sentiment import load_sentiment_model, predict_sentiment
 from src.pipeline import run_feedback_pipeline
 from src.insights import generate_vibe_insight
