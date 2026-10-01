@@ -141,7 +141,7 @@ These recommendations are intentionally designed as **decision-support signals r
 
 ## Dataset
 
-The project uses the **Yelp Review Full** dataset as the primary source of customer-review text.
+The project uses the **Yelp Review Full** dataset as the primary source of customer-review text for development and model evaluation.
 
 A balanced development sample was created containing:
 
@@ -151,6 +151,10 @@ A balanced development sample was created containing:
 - 3,000 Neutral
 
 Sentiment labels were derived from the original review ratings to support the three-class sentiment analysis used by VibeSig.
+
+The development dataset is maintained locally and is intentionally excluded from the public repository through `.gitignore`. It is used for model development, benchmarking, and evaluation but is **not required to run the VibeSig application**.
+
+The deployed application operates independently of the development dataset: users can analyze individual reviews or upload their own CSV files for batch analysis.
 
 ---
 
@@ -385,9 +389,6 @@ VibeSig/
 │
 ├── benchmarks/
 │   └── evaluate_positive_threshold.py
-│
-├── data/
-│   └── yelp_vibesig_sample.csv
 │
 ├── src/
 │   ├── batch.py
