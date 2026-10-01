@@ -257,6 +257,8 @@ with batch_tab:
 
                 st.session_state.batch_results = analysis["results"]
                 st.session_state.batch_summary = analysis["summary"]
+                st.session_state.analysis_df = analysis_df
+                st.session_state.analysis_text_column = text_column
 
             # -------------------------------------------------
             # DISPLAY STORED ANALYSIS
@@ -771,16 +773,22 @@ with batch_tab:
                                 # ---------------------------------------------
                 # MODEL PERFORMANCE
                 # ---------------------------------------------
-
-                if "actual_sentiment" in analysis_df.columns:
+                analysis_df = st.session_state.get("analysis_df")
+                analysis_text_column = st.session_state.get("analysis_text_column")
+                
+                if (
+                    analysis_df is not None
+                    and analysis_text_column is not None
+                    and "actual_sentiment" in analysis_df.columns
+                ):
 
                     evaluation_df = analysis_df[
-                        analysis_df[text_column]
-                        .notna()
-                        & analysis_df[text_column]
-                        .astype(str)
-                        .str.strip()
-                        .ne("")
+                    analysis_df[analysis_text_column]
+                    .notna()
+                    & analysis_df[analysis_text_column]
+                    .astype(str)
+                    .str.strip()
+                    .ne("")
                     ].copy()
 
                     actual_sentiments = (
