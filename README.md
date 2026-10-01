@@ -1,5 +1,13 @@
 # VibeSig
 
+### Live Application
+
+**Try VibeSig:** https://vibesig.streamlit.app/
+
+VibeSig is deployed on Streamlit Community Cloud and can be used directly from the browser to analyze individual customer reviews or CSV datasets.
+
+---
+
 ### Customer Feedback Intelligence
 
 **Turn customer feedback into actionable signals.**
