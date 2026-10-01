@@ -10,6 +10,7 @@ from src.drivers import (
     prioritize_negative_drivers,
 )
 from src.recommendations import generate_action_recommendations
+from src.evaluation import evaluate_sentiment_predictions
 
 
 st.set_page_config(
@@ -758,6 +759,235 @@ with batch_tab:
                     )
 
                 st.divider()
+
+                                # ---------------------------------------------
+                # MODEL PERFORMANCE
+                # ---------------------------------------------
+
+                if "actual_sentiment" in analysis_df.columns:
+
+                    evaluation_df = analysis_df[
+                        analysis_df[text_column]
+                        .notna()
+                        & analysis_df[text_column]
+                        .astype(str)
+                        .str.strip()
+                        .ne("")
+                    ].copy()
+
+                    actual_sentiments = (
+                        evaluation_df["actual_sentiment"]
+                        .astype(str)
+                        .str.strip()
+                    )
+
+                    valid_labels = {
+                        "Negative",
+                        "Neutral",
+                        "Positive",
+                    }
+
+                    evaluation_mask = actual_sentiments.isin(
+                        valid_labels
+                    )
+
+                    actual_sentiments = (
+                        actual_sentiments[
+                            evaluation_mask
+                        ].reset_index(drop=True)
+                    )
+
+                    predicted_sentiments = (
+                        results_df.loc[
+                            evaluation_mask.to_numpy(),
+                            "sentiment",
+                        ].reset_index(drop=True)
+                    )
+
+                    if len(actual_sentiments) > 0:
+
+                        evaluation = evaluate_sentiment_predictions(
+                            actual_sentiments,
+                            predicted_sentiments,
+                        )
+
+                        st.divider()
+
+                        st.subheader("Model Performance")
+
+                        st.caption(
+                            "PERFORMANCE AGAINST AVAILABLE "
+                            "GROUND-TRUTH LABELS"
+                        )
+
+                        st.write(
+                            f"Evaluation based on "
+                            f"{evaluation['total_samples']:,} "
+                            f"labeled reviews."
+                        )
+
+                        metric1, metric2, metric3, metric4 = (
+                            st.columns(4)
+                        )
+
+                        with metric1:
+                            st.metric(
+                                "Accuracy",
+                                f"{evaluation['accuracy'] * 100:.1f}%",
+                            )
+
+                        with metric2:
+                            st.metric(
+                                "Macro Precision",
+                                f"{evaluation['macro_precision'] * 100:.1f}%",
+                            )
+
+                        with metric3:
+                            st.metric(
+                                "Macro Recall",
+                                f"{evaluation['macro_recall'] * 100:.1f}%",
+                            )
+
+                        with metric4:
+                            st.metric(
+                                "Macro F1",
+                                f"{evaluation['macro_f1'] * 100:.1f}%",
+                            )
+
+                        # -------------------------------------
+                        # PERFORMANCE BY CLASS
+                        # -------------------------------------
+
+                        st.markdown("#### Performance by Class")
+
+                        class_rows = []
+
+                        for label in evaluation["labels"]:
+                            metrics = evaluation[
+                                "per_class"
+                            ][label]
+
+                            class_rows.append(
+                                {
+                                    "Sentiment": label,
+                                    "Precision": f"{metrics['precision'] * 100:.1f}%",
+                                    "Recall": f"{metrics['recall'] * 100:.1f}%",
+                                    "F1": f"{metrics['f1'] * 100:.1f}%",
+                                    "Support": metrics["support"],
+                                }
+                            )
+
+                        class_df = pd.DataFrame(class_rows)
+
+                        st.dataframe(
+                            class_df,
+                            use_container_width=True,
+                            hide_index=True,
+                                    )
+
+                        # -------------------------------------
+                        # CONFUSION MATRIX
+                        # -------------------------------------
+
+                        st.markdown("#### Confusion Matrix")
+
+                        st.caption(
+                            "Rows represent actual sentiment; "
+                            "columns represent VibeSig predictions."
+                        )
+
+                        matrix_df = pd.DataFrame(
+                            evaluation["confusion_matrix"],
+                            index=evaluation["labels"],
+                            columns=evaluation["labels"],
+                        )
+
+                        matrix_long = (
+                            matrix_df
+                            .rename_axis("Actual")
+                            .reset_index()
+                            .melt(
+                                id_vars="Actual",
+                                var_name="Predicted",
+                                value_name="Count",
+                            )
+                        )
+
+                        matrix_chart = (
+                            alt.Chart(matrix_long)
+                            .mark_rect(
+                                cornerRadius=4,
+                            )
+                            .encode(
+                                x=alt.X(
+                                    "Predicted:N",
+                                    title="Predicted",
+                                    sort=evaluation["labels"],
+                                ),
+                                y=alt.Y(
+                                    "Actual:N",
+                                    title="Actual",
+                                    sort=evaluation["labels"],
+                                ),
+                                color=alt.Color(
+                                    "Count:Q",
+                                    title="Reviews",
+                                ),
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Actual:N",
+                                        title="Actual",
+                                    ),
+                                    alt.Tooltip(
+                                        "Predicted:N",
+                                        title="Predicted",
+                                    ),
+                                    alt.Tooltip(
+                                        "Count:Q",
+                                        title="Reviews",
+                                    ),
+                                ],
+                            )
+                        )
+
+                        matrix_labels = (
+                            alt.Chart(matrix_long)
+                            .mark_text(
+                                fontSize=16,
+                                fontWeight="bold",
+                            )
+                            .encode(
+                                x=alt.X(
+                                    "Predicted:N",
+                                    sort=evaluation["labels"],
+                                ),
+                                y=alt.Y(
+                                    "Actual:N",
+                                    sort=evaluation["labels"],
+                                ),
+                                text=alt.Text(
+                                    "Count:Q",
+                                    format="d",
+                                ),
+                            )
+                        )
+
+                        confusion_chart = (
+                            (matrix_chart + matrix_labels)
+                            .properties(
+                                height=300,
+                            )
+                            .configure_view(
+                                strokeWidth=0
+                            )
+                        )
+
+                        st.altair_chart(
+                            confusion_chart,
+                            use_container_width=True,
+                        )
+
+
 
                 # ---------------------------------------------
                 # RESULTS TABLE
